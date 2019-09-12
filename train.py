@@ -54,12 +54,6 @@ def optimizer(net, args):
     elif args.optimizer.lower() == "radam":
             return radam.RAdam(net.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
 
-def label_to_tensor(labels):
-    v = torch.zeros(labels.shape[0], 10)
-    for i in range(labels.shape[0]):
-        v[i][labels[i]] = 1
-    return v
-
 def test(net, criterion, testloader, args):
     net.eval()
     with torch.no_grad():

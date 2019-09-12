@@ -6,6 +6,9 @@ import torchvision.transforms as transforms
 import torch.optim as optim
 import argparse
 
+#our libs
+from lib import radam
+
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
@@ -42,11 +45,20 @@ def dataloader(args):
     return trainloader, testloader
 
 def optimizer(net, args):
+    assert args.optimizer.lower() in ["sgd", "adam", "radam"], "Invalid Optimizer"
+
     if args.optimizer.lower() == "sgd":
-	       return optim.SGD(net.parameters(), lr=args.lr, momentum=args.beta1)
+	       return optim.SGD(net.parameters(), lr=args.lr, momentum=args.beta1, nesterov=args.nesterov)
     elif args.optimizer.lower() == "adam":
 	       return optim.Adam(net.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
-    return
+    elif args.optimizer.lower() == "radam":
+            return radam.RAdam(net.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
+
+def label_to_tensor(labels):
+    v = torch.zeros(labels.shape[0], 10)
+    for i in range(labels.shape[0]):
+        v[i][labels[i]] = 1
+    return v
 
 def test(net, criterion, testloader, args):
     net.eval()
@@ -56,9 +68,9 @@ def test(net, criterion, testloader, args):
             inputs, labels = data
             outputs = net(inputs)
             pred = F.softmax(outputs, 1)
-            if torch.sum(round(pred) == labels) == 1:
-                correct += 1
-        print(correct / len(testloader))
+            _, pred = torch.max(pred, 1)
+            correct += torch.sum(pred==labels)
+        print("Test set accuracy: " + float(correct)/ float(testloader.__len__() * args.batch_size))
 
 def train(net, criterion, optimizer, trainloader, args):
     for epoch in range(1, args.epoch+1):
@@ -72,25 +84,26 @@ def train(net, criterion, optimizer, trainloader, args):
             optimizer.step()
 
             running_loss += loss.item()
-            if i % 2000 == 0:
+            if i % 2000 == 0 and i > 0:
                 print('[Epoch %02d, Minibatch %05d] Loss: %.5f' %
-			    (epoch, i+1, running_loss/2000))
+			    (epoch, i, running_loss/2000))
                 running_loss = 0.0
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    # Model related arguments
     # optimization related arguments
     parser.add_argument('--batch_size', default=4, type=int,
                         help='input batch size')
-    parser.add_argument('--epoch', default=120, type=int,
+    parser.add_argument('--epoch', default=5, type=int,
                         help='epochs to train for')
     parser.add_argument('--optimizer', default='sgd', help='optimizer')
     parser.add_argument('--lr', default=0.001, type=float, help='LR')
     parser.add_argument('--beta1', default=0.9, type=float,
                         help='momentum for sgd, beta1 for adam')
     parser.add_argument('--beta2', default=0.999, type=float)
+    parser.add_argument('--nesterov', default=False)
+
     args = parser.parse_args()
 
     print("Input arguments:")

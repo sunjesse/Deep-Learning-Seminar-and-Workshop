@@ -1,4 +1,5 @@
 #!/bin/bash
 
-pip3 install torch \
+pip3 install numpy \
+						torch \
 	     torchvision

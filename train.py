@@ -64,7 +64,7 @@ def test(net, criterion, testloader, args):
             pred = F.softmax(outputs, 1)
             _, pred = torch.max(pred, 1)
             correct += torch.sum(pred==labels)
-        print("Test set accuracy: " + float(correct)/ float(testloader.__len__() * args.batch_size))
+        print("Test set accuracy: " + str(float(correct)/ float(testloader.__len__() * args.batch_size)))
 
 def train(net, criterion, optimizer, trainloader, args):
     for epoch in range(1, args.epoch+1):
